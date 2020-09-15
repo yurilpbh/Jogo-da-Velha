@@ -10,3 +10,4 @@ A proposta visa desenvolver conceitos nas áreas de:
 
 Além disso também trabalha com conceitos de conexão via rede utilizando sockets e trabalha o desenvolvimento da lógica do jogo.
 
+Para executar o jogo, basta baixar o repositório e executá-lo no visual studio.
