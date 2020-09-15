@@ -322,6 +322,7 @@ namespace JogoGalo
 
                     case ProtocolSICmdType.USER_OPTION_7: //Troca de posição
                         msg = lastMsg.Split('/');
+                        enviaACK();
                         if(msg.Length == 1) //Usuário solicitou a troca
                         {
                             DialogResult result = MessageBox.Show(msg[0],"Solicitação de troca", MessageBoxButtons.YesNo);

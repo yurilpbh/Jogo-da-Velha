@@ -9,7 +9,6 @@ namespace Security
 {
     public class security //Classe que trata de toda a segurança da conexão
     {
-        private string publicKey;
         private AesCryptoServiceProvider aes;
         private RSACryptoServiceProvider rsa;
         private static int SALTSIZE;
@@ -31,7 +30,6 @@ namespace Security
 
         public void setPublicKey(string pubKey)
         {
-            publicKey = pubKey;
             rsa.FromXmlString(pubKey);
         }
 

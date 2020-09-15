@@ -108,14 +108,18 @@ namespace ClienteHandler
                         NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
                         newNetworkStream.Write(msgByte, 0, msgByte.Length);
                         newNetworkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
-                        while (protocolSI.GetCmdType() != ProtocolSICmdType.USER_OPTION_1 || protocolSI.GetCmdType() != ProtocolSICmdType.USER_OPTION_2)
+                        ProtocolSICmdType protocolSICmdType = protocolSI.GetCmdType();
+                        while (protocolSICmdType != ProtocolSICmdType.USER_OPTION_1 && protocolSICmdType != ProtocolSICmdType.USER_OPTION_2)
                         {
                             newNetworkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
+                            protocolSICmdType = protocolSI.GetCmdType();
+                            int a = 1;
                         }
-                        newNetworkStream.Close();
                         connection.ReleaseMutex(); //Libera o networkStream
-                        if (protocolSI.GetCmdType() == ProtocolSICmdType.USER_OPTION_1)
+                        Console.WriteLine("oi");
+                        if (protocolSICmdType == ProtocolSICmdType.USER_OPTION_1)
                         {
+                            Console.WriteLine("ei");
                             msg = "1/Solicitação aceita";
                             msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
                             networkStream.Write(msgByte, 0, msgByte.Length);
@@ -124,6 +128,7 @@ namespace ClienteHandler
                         }
                         else
                         {
+                            Console.WriteLine("ou");
                             msg = "0/Solicitação negada";
                             msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
                             networkStream.Write(msgByte, 0, msgByte.Length);
