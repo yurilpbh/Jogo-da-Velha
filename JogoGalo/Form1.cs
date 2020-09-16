@@ -1,20 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Net.Sockets;
 using System.Net;
-using System.Security.Cryptography;
 using EI.SI;
-using System.Threading;
 using System.IO;
-using System.Security.Cryptography.X509Certificates;
-using System.Security.Policy;
+using Security;
 
 namespace JogoGalo
 {
@@ -141,7 +133,7 @@ namespace JogoGalo
             }
             if (networkStream.CanRead)
             {
-                networkStream.WriteTimeout = 1000;
+                networkStream.ReadTimeout = 1000;
                 try
                 {
                     esperaACK();
@@ -322,7 +314,6 @@ namespace JogoGalo
 
                     case ProtocolSICmdType.USER_OPTION_7: //Troca de posição
                         msg = lastMsg.Split('/');
-                        enviaACK();
                         if(msg.Length == 1) //Usuário solicitou a troca
                         {
                             DialogResult result = MessageBox.Show(msg[0],"Solicitação de troca", MessageBoxButtons.YesNo);
@@ -368,7 +359,21 @@ namespace JogoGalo
                         break;
 
                     case ProtocolSICmdType.USER_OPTION_9:
+                        msg = lastMsg.Split('/');
+                        MessageBox.Show(msg[0]);
+                        if(tbJogador1.Text == msg[1])
+                        {
+                            tbJogador1.Text = "";
+                        } else
+                        {
+                            tbJogador2.Text = "";
+                        }
+                        tbPontos1.Text = "";
+                        tbPontos2.Text = "";
+                        break;
 
+                    case ProtocolSICmdType.ACK: //Primeira mensagem enviada para situações de broadcast
+                        enviaACK();
                         break;
 
                     default:
@@ -386,114 +391,6 @@ namespace JogoGalo
                 if (networkStream.CanWrite) { enviaACK(); }
             }
             backgroundWorker1.RunWorkerAsync();
-        }
-
-        class securityData //Cuida da segurança da conexão e dos dados
-        {
-            private RSACryptoServiceProvider rsa;
-            private AesCryptoServiceProvider aes;
-            private string publicKey;
-            private string senha;
-            public securityData()
-            {
-                rsa = new RSACryptoServiceProvider();
-                aes = new AesCryptoServiceProvider();
-                publicKey = rsa.ToXmlString(false); //Criar e devolver uma string que contém a chave pública
-            }
-            public string getChavePublica()
-            {
-                return publicKey;
-            }
-
-            public void setSenha(string senha)
-            {
-                this.senha = senha;
-            }
-            public string getSenha()
-            {
-                return senha;
-            }
-
-            public void setChaveSimetrica(string dataEncrypted)
-            {
-                byte[] dados = Convert.FromBase64String(dataEncrypted);
-                //Decifra os dados utilizando RSA
-                aes.Key = rsa.Decrypt(dados, true);
-            }
-
-            public void setIV(string dataEncrypted)
-            {
-                byte[] dados = Convert.FromBase64String(dataEncrypted);
-                //Decifra os dados utilizando RSA
-                aes.IV = rsa.Decrypt(dados, true);
-            }
-
-            public string cifrarMensagem(string txt)
-            {
-                //Variável para guardar o texto decifrado em bytes
-                byte[] txtDecifrado = Encoding.UTF8.GetBytes(txt);
-                //Variável para guardar o texto cifrado em bytes
-                byte[] txtCifrado;
-
-                //Reservar espaço em memória para por lá o texto e cifrá-lo
-                MemoryStream ms = new MemoryStream();
-                //Inicializar o sistema de cifragem (Write)
-                CryptoStream cs = new CryptoStream(ms, this.aes.CreateEncryptor(), CryptoStreamMode.Write);
-
-                //Cifrar os dados
-                cs.Write(txtDecifrado, 0, txtDecifrado.Length);
-                cs.Close();
-
-                //Guardar os dados cifrados que estão em memória
-                txtCifrado = ms.ToArray();
-                //Converter os bytes para Base64 (texto)
-                string txtCifrado64 = Convert.ToBase64String(txtCifrado);
-                return txtCifrado64;
-            }
-
-            public string decifrarMensagem(string txt)
-            {
-                if(txt == "0")
-                {
-                    return "";
-                }
-                //Variável para guardar o texto cifrado em bytes
-                byte[] txtCifrado = Convert.FromBase64String(txt);
-
-                //Reservar espaço em memória para por lá o texto e decifrá-lo
-                MemoryStream ms = new MemoryStream(txtCifrado);
-                //Inicializar o sistema de decifragem (Read)
-                CryptoStream cs = new CryptoStream(ms, this.aes.CreateDecryptor(), CryptoStreamMode.Read);
-
-                //Variável para guardar o texto decifrado em bytes
-                byte[] txtDecifrado = new byte[ms.Length];
-                //Variável para ter o número de bytes decifrados
-                int bytesLidos = 0;
-
-                //Decifrar os dados
-                bytesLidos = cs.Read(txtDecifrado, 0, txtDecifrado.Length);
-                cs.Close();
-
-                //Converter os bytes para (texto)
-                string txtDecifrado64 = Encoding.UTF8.GetString(txtDecifrado, 0, bytesLidos);
-                return txtDecifrado64;
-            }
-
-            private byte[] hash(string msg)
-            {
-                byte[] hash;
-                using (SHA1 sha1 = SHA1.Create())
-                {
-                    byte[] dados = Encoding.UTF8.GetBytes(msg);
-                    hash = sha1.ComputeHash(dados);
-                }
-                return hash;
-            }
-            public string signHash(string msg)
-            {
-                byte[] signature = rsa.SignHash(hash(msg), CryptoConfig.MapNameToOID("SHA1"));
-                return Convert.ToBase64String(signature);
-            }
         }
 
         private void jogada(string button, string symbol) //Identifica a jogada feita

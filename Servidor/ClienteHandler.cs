@@ -76,6 +76,10 @@ namespace ClienteHandler
             foreach (ClientHandler client in room.getClientList())
             {
                 NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para o client
+
+                byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK);
+                newNetworkStream.Write(ack, 0, ack.Length);
+
                 msgToSend = protocolSI.Make(cmd, client.security.CifrarTexto(msg));
                 newNetworkStream.Write(msgToSend, 0, msgToSend.Length);
                 esperaACK();
@@ -106,20 +110,22 @@ namespace ClienteHandler
 
                         connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
                         NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
+
+                        byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK);
+                        newNetworkStream.Write(ack, 0, ack.Length);
+
                         newNetworkStream.Write(msgByte, 0, msgByte.Length);
                         newNetworkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
+
                         ProtocolSICmdType protocolSICmdType = protocolSI.GetCmdType();
                         while (protocolSICmdType != ProtocolSICmdType.USER_OPTION_1 && protocolSICmdType != ProtocolSICmdType.USER_OPTION_2)
                         {
                             newNetworkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
                             protocolSICmdType = protocolSI.GetCmdType();
-                            int a = 1;
-                        }
+                        }  
                         connection.ReleaseMutex(); //Libera o networkStream
-                        Console.WriteLine("oi");
                         if (protocolSICmdType == ProtocolSICmdType.USER_OPTION_1)
                         {
-                            Console.WriteLine("ei");
                             msg = "1/Solicitação aceita";
                             msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
                             networkStream.Write(msgByte, 0, msgByte.Length);
@@ -128,7 +134,6 @@ namespace ClienteHandler
                         }
                         else
                         {
-                            Console.WriteLine("ou");
                             msg = "0/Solicitação negada";
                             msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
                             networkStream.Write(msgByte, 0, msgByte.Length);
@@ -365,16 +370,14 @@ namespace ClienteHandler
 
                     case ProtocolSICmdType.EOT: //Finaliza a sessão do jogador
                         Console.WriteLine("Ending Thread from {0}", nomeJogador);
-                        enviaACK();
                         if (room != null && room.getClientList().Count == 2)
                         {
-                            int jogadorPos = room.getNomeJogador(1) == nomeJogador ? 1 : 2;
                             connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
                             foreach (ClientHandler client in this.room.getClientList()) //Faz um broadcast para atualizar todos os jogadores
                             {
                                 if (client.clientID != this.clientID)
                                 {
-                                    msg = String.Format("{0}/{1}", nomeJogador, jogadorPos);
+                                    msg = String.Format("Jogador {0} deixou a sala/{1}", nomeJogador, nomeJogador);
                                     NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
                                     msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_9, client.security.CifrarTexto(msg));
                                     newNetworkStream.Write(msgByte, 0, msgByte.Length);
