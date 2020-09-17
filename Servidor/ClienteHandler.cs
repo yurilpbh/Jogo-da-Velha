@@ -312,7 +312,7 @@ namespace ClienteHandler
 
                                 case 1: //Jogo termina com um ganhador
                                     broadcast(String.Format("{0}{1}/{2}", line, col, symbolPlayer), ProtocolSICmdType.USER_OPTION_5);
-                                    broadcast(String.Format("{0} ganhou!", nomeJogador), ProtocolSICmdType.USER_OPTION_6);
+                                    broadcast(String.Format("{0}/ganhou!", nomeJogador), ProtocolSICmdType.USER_OPTION_6);
                                     room.novoJogo();
                                     trocaPosicao = trocaDePosicao(trocaPosicao);
                                     break;
@@ -382,10 +382,16 @@ namespace ClienteHandler
                                     msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_9, client.security.CifrarTexto(msg));
                                     newNetworkStream.Write(msgByte, 0, msgByte.Length);
                                     break;
+                                } else
+                                {
+                                    enviaACK();
                                 }
                             }
                             connection.ReleaseMutex(); //Libera o networkStream
                             room.novoJogo();
+                        } else
+                        {
+                            enviaACK();
                         }
                         break;
 

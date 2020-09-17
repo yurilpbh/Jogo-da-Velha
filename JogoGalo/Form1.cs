@@ -7,6 +7,7 @@ using System.Net;
 using EI.SI;
 using System.IO;
 using Security;
+using System.Threading;
 
 namespace JogoGalo
 {
@@ -133,15 +134,7 @@ namespace JogoGalo
             }
             if (networkStream.CanRead)
             {
-                networkStream.ReadTimeout = 1000;
-                try
-                {
-                    esperaACK();
-                }
-                catch (IOException)
-                {
-                }
-
+                esperaACK(1000);
             }
             networkStream.Close();
             tcpClient.Close();
@@ -186,18 +179,27 @@ namespace JogoGalo
         }
 
         private void enviaACK()
-        {
+        { 
             //Envia o ACK para o servidor
             byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK);
             networkStream.Write(ack, 0, ack.Length);
         }
 
-        private void esperaACK()
+        private void esperaACK(int timeout = -1)
         {
+            networkStream.ReadTimeout = timeout;
+            
             networkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
             while (protocolSI.GetCmdType() != ProtocolSICmdType.ACK)
             {
-                networkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
+                try
+                {
+                    networkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
+                }
+                catch (IOException)
+                {
+                    return;
+                }
             }
         }
 
@@ -288,7 +290,7 @@ namespace JogoGalo
 
                     case ProtocolSICmdType.USER_OPTION_6: //Diz quem ganhou e reinicia o jogo
                         MessageBox.Show(lastMsg);
-                        msg = lastMsg.Split(' ');
+                        msg = lastMsg.Split('/');
                         int pontos = 0;
                         if (msg[0] == tbJogador1.Text) //Jogador 1 ganhou
                         {
@@ -372,8 +374,7 @@ namespace JogoGalo
                         tbPontos2.Text = "";
                         break;
 
-                    case ProtocolSICmdType.ACK: //Primeira mensagem enviada para situações de broadcast
-                        enviaACK();
+                    case ProtocolSICmdType.ACK:
                         break;
 
                     default:
