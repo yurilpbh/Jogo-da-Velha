@@ -32,6 +32,7 @@ namespace JogoGalo
             tbSala.Enabled = false;
             btTrocarPosicao.Enabled = false;
             btVarJogadores.Enabled = false;
+            tbProxJogador.Enabled = false;
             buttons = new List<Button>();
             buttons.Add(bt00); buttons.Add(bt01); buttons.Add(bt02);
             buttons.Add(bt10); buttons.Add(bt11); buttons.Add(bt12);
@@ -108,6 +109,11 @@ namespace JogoGalo
                 }
                 networkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
             }
+            lastMsg = protocolSecurity.decifrarMensagem(protocolSI.GetStringFromData());
+            string[] msg = lastMsg.Split('/'); ;
+            tbJogadores.Text = msg[0];
+            tbPontos.Text = msg[1];
+
             btConectar.Enabled = true;
             tbSala.Enabled = true;
             btSair.Enabled = true;
@@ -131,10 +137,6 @@ namespace JogoGalo
             if (networkStream.CanWrite)
             {
                 networkStream.Write(eot, 0, eot.Length);
-            }
-            if (networkStream.CanRead)
-            {
-                esperaACK(1000);
             }
             networkStream.Close();
             tcpClient.Close();
@@ -166,6 +168,7 @@ namespace JogoGalo
             btMensagem.Enabled = true;
             btTrocarPosicao.Enabled = true;
             btVarJogadores.Enabled = true;
+            btConectar.Enabled = false;
             enviaACK();
             backgroundWorker1.RunWorkerAsync();
         }
@@ -208,7 +211,20 @@ namespace JogoGalo
             //Função que fica a escutar o servidor de forma assíncrona esperando novas mensagens
             if (networkStream.CanRead)
             {
-                networkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
+                try
+                {
+                    networkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
+                }
+                catch (IOException)
+                {
+                    Console.WriteLine("IOException");
+                    
+                }
+                catch (InvalidOperationException)
+                {
+                    Console.WriteLine("InvalidOperationException");
+
+                }
             }
         }
 
@@ -289,8 +305,8 @@ namespace JogoGalo
                         break;
 
                     case ProtocolSICmdType.USER_OPTION_6: //Diz quem ganhou e reinicia o jogo
-                        MessageBox.Show(lastMsg);
                         msg = lastMsg.Split('/');
+                        MessageBox.Show(msg[0] + " " + msg[1]);
                         int pontos = 0;
                         if (msg[0] == tbJogador1.Text) //Jogador 1 ganhou
                         {
@@ -362,7 +378,6 @@ namespace JogoGalo
 
                     case ProtocolSICmdType.USER_OPTION_9:
                         msg = lastMsg.Split('/');
-                        MessageBox.Show(msg[0]);
                         if(tbJogador1.Text == msg[1])
                         {
                             tbJogador1.Text = "";
@@ -560,6 +575,7 @@ namespace JogoGalo
         {
             byte[] varJogadores = protocolSI.Make(ProtocolSICmdType.USER_OPTION_6);
             networkStream.Write(varJogadores, 0, varJogadores.Length);
+            tbProxJogador.Enabled = true;
         }
     }
 }

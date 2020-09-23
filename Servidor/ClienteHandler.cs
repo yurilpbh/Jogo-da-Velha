@@ -313,14 +313,12 @@ namespace ClienteHandler
                                 case 1: //Jogo termina com um ganhador
                                     broadcast(String.Format("{0}{1}/{2}", line, col, symbolPlayer), ProtocolSICmdType.USER_OPTION_5);
                                     broadcast(String.Format("{0}/ganhou!", nomeJogador), ProtocolSICmdType.USER_OPTION_6);
-                                    room.novoJogo();
                                     trocaPosicao = trocaDePosicao(trocaPosicao);
                                     break;
 
                                 case 2://Jogo termina em empate
                                     broadcast(String.Format("{0}{1}/{2}", line, col, symbolPlayer), ProtocolSICmdType.USER_OPTION_5);
                                     broadcast(String.Format("Empate!", nomeJogador), ProtocolSICmdType.USER_OPTION_6);
-                                    room.novoJogo();
                                     trocaPosicao = trocaDePosicao(trocaPosicao);
                                     break;
 
@@ -328,6 +326,9 @@ namespace ClienteHandler
                                     msg = "Espere a sua vez!";
                                     byte[] jogadorIncorreto = protocolSI.Make(ProtocolSICmdType.USER_OPTION_4, security.CifrarTexto(msg));
                                     networkStream.Write(jogadorIncorreto, 0, jogadorIncorreto.Length);
+                                    break;
+                                default:
+                                    Console.WriteLine("Algo de errado aconteceu ao executar room.move");
                                     break;
                             }
                         }
@@ -357,7 +358,9 @@ namespace ClienteHandler
                         if (security.VerifyLogin(this.nomeJogador, senha))
                         { //Autentica o jogador
                             Console.WriteLine("{0} autenticado com sucesso", this.nomeJogador);
-                            enviaACK();
+                            msg = String.Format("{0}/{1}", nomeJogador, security.GetPoints(nomeJogador));
+                            byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK, security.CifrarTexto(msg));
+                            networkStream.Write(ack, 0, ack.Length);
                         }
                         else
                         {
@@ -370,29 +373,31 @@ namespace ClienteHandler
 
                     case ProtocolSICmdType.EOT: //Finaliza a sessão do jogador
                         Console.WriteLine("Ending Thread from {0}", nomeJogador);
-                        if (room != null && room.getClientList().Count == 2)
+                        if (room != null)
                         {
-                            connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
-                            foreach (ClientHandler client in this.room.getClientList()) //Faz um broadcast para atualizar todos os jogadores
+                            int posJogador = room.getPosJogador(nomeJogador) == 1 ? 1 : 2;
+                            security.setPoints(nomeJogador, room.getPontos(posJogador));
+                            if (room.getClientList().Count == 2)
                             {
-                                if (client.clientID != this.clientID)
+                                connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
+                                foreach (ClientHandler client in this.room.getClientList()) //Faz um broadcast para atualizar todos os jogadores
                                 {
-                                    msg = String.Format("Jogador {0} deixou a sala/{1}", nomeJogador, nomeJogador);
-                                    NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
-                                    msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_9, client.security.CifrarTexto(msg));
-                                    newNetworkStream.Write(msgByte, 0, msgByte.Length);
-                                    break;
-                                } else
-                                {
-                                    enviaACK();
+                                    if (client.clientID != this.clientID)
+                                    {
+                                        msg = String.Format("Jogador {0} deixou a sala/{1}", nomeJogador, nomeJogador);
+                                        NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
+
+                                        byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK);
+                                        newNetworkStream.Write(ack, 0, ack.Length);
+
+                                        msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_9, client.security.CifrarTexto(msg));
+                                        newNetworkStream.Write(msgByte, 0, msgByte.Length);
+                                    }
                                 }
+                                connection.ReleaseMutex(); //Libera o networkStream
                             }
-                            connection.ReleaseMutex(); //Libera o networkStream
-                            room.novoJogo();
-                        } else
-                        {
-                            enviaACK();
                         }
+                        room.novoJogo();
                         break;
 
                     case ProtocolSICmdType.ACK: //Caso no qual é feito um broadcast e a thread "errada" recebe o ACK e, portanto

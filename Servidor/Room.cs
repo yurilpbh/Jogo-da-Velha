@@ -138,7 +138,29 @@ namespace Room
         public int move(int line, int col, string nome)
         {
             int posJogador = nome == jogador1 ? 0 : 1;
-            return jogo.move(line, col, posJogador);
+            switch (jogo.move(line, col, posJogador))
+            {
+                case -1: //Movimento é inválido
+                    return -1;
+
+                case 0: //Movimento válido
+                    return 0;
+
+                case 1: //Jogo termina com um ganhador
+                    ganhador(posJogador);
+                    novoJogo();
+                    return 1;
+
+                case 2://Jogo termina em empate
+                    ganhador(3);
+                    novoJogo();
+                    return 2;
+
+                case 3: //Jogador incorreto tentou fazer o movimento
+                    return 3;
+                default:
+                    return 4;
+            }
         }
 
         public void novoJogo()
@@ -146,7 +168,7 @@ namespace Room
             jogo = new Jogo();
         }
 
-        public void ganhador(int quem)
+        private void ganhador(int quem)
         {
             switch (quem)
             {

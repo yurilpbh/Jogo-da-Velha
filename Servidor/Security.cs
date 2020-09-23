@@ -157,7 +157,7 @@ namespace Security
             {
                 // Configurar ligação à Base de Dados
                 conn = new SqlConnection();
-                conn.ConnectionString = String.Format(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename='C:\Users\yuril\Documents\Disciplinas\TS\TP\Cliente\Servidor\Database-Users.mdf';Integrated Security=True");
+                conn.ConnectionString = String.Format(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename='C:\Users\yuril\source\repos\Jogo-da-Velha\Servidor\Database-Users.mdf';Integrated Security=True");
 
                 // Abrir ligação à Base de Dados
                 conn.Open();
@@ -213,13 +213,13 @@ namespace Security
             byte[] saltedPasswordHash, salt;
             salt = GenerateSalt();
             saltedPasswordHash = GenerateSaltedHash(senha, salt);
+            int points = 0;
             SqlConnection conn = null;
             try
             {
-
                 // Configurar ligação à Base de Dados
                 conn = new SqlConnection();
-                conn.ConnectionString = String.Format(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename='C:\Users\yuril\Documents\Disciplinas\TS\TP\Cliente\Servidor\Database-Users.mdf';Integrated Security=True");
+                conn.ConnectionString = String.Format(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename='C:\Users\yuril\source\repos\Jogo-da-Velha\Servidor\Database-Users.mdf';Integrated Security=True");
 
                 // Abrir ligação à Base de Dados
                 conn.Open();
@@ -228,9 +228,10 @@ namespace Security
                 SqlParameter paramUsername = new SqlParameter("@username", username);
                 SqlParameter paramPassHash = new SqlParameter("@saltedPasswordHash", saltedPasswordHash);
                 SqlParameter paramSalt = new SqlParameter("@salt", salt);
+                SqlParameter paramPoints = new SqlParameter("@points", points);
 
                 // Declaração do comando SQL
-                String sql = "INSERT INTO Users (Username, SaltedPasswordHash, Salt) VALUES (@username,@saltedPasswordHash,@salt)";
+                String sql = "INSERT INTO Users (Username, SaltedPasswordHash, Salt, Points) VALUES (@username,@saltedPasswordHash,@salt,@points)";
 
                 // Prepara comando SQL para ser executado na Base de Dados
                 SqlCommand cmd = new SqlCommand(sql, conn);
@@ -239,6 +240,7 @@ namespace Security
                 cmd.Parameters.Add(paramUsername);
                 cmd.Parameters.Add(paramPassHash);
                 cmd.Parameters.Add(paramSalt);
+                cmd.Parameters.Add(paramPoints);
 
                 // Executar comando SQL
                 int lines = cmd.ExecuteNonQuery();
@@ -255,6 +257,97 @@ namespace Security
             catch (Exception e)
             {
                 throw new Exception("Erro enquanto inseria um usuário:" + e.Message);
+            }
+        }
+
+        public int GetPoints(string username)
+        {
+            SqlConnection conn = null;
+            try
+            {
+                // Configurar ligação à Base de Dados
+                conn = new SqlConnection();
+                conn.ConnectionString = String.Format(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename='C:\Users\yuril\source\repos\Jogo-da-Velha\Servidor\Database-Users.mdf';Integrated Security=True");
+
+                // Abrir ligação à Base de Dados
+                conn.Open();
+
+                // Declaração do comando SQL
+                String sql = "SELECT Points FROM Users WHERE Username = @username";
+                SqlCommand cmd = new SqlCommand();
+                cmd.CommandText = sql;
+
+                // Declaração dos parâmetros do comando SQL
+                SqlParameter param = new SqlParameter("@username", username);
+
+                // Introduzir valor ao parâmentro registado no comando SQL
+                cmd.Parameters.Add(param);
+
+                // Associar ligação à Base de Dados ao comando a ser executado
+                cmd.Connection = conn;
+
+                // Executar comando SQL
+                SqlDataReader reader = cmd.ExecuteReader();
+
+                // Ler resultado da pesquisa
+                reader.Read();
+
+                // Obter Hash (password + salt)
+                int points = Convert.ToInt32(reader["Points"]);
+
+                conn.Close();
+
+                return points;
+            }
+            catch
+            {
+                Console.WriteLine("Ocorreu um erro ao buscar os pontos de um jogador");
+                return 0;
+            }
+        }
+
+        public void setPoints(string username, int points)
+        {
+            SqlConnection conn = null;
+            Console.WriteLine("{0},{1}", username, points);
+            try
+            {
+                // Configurar ligação à Base de Dados
+                conn = new SqlConnection();
+                conn.ConnectionString = String.Format(@"Data Source=(LocalDB)\MSSQLLocalDB;AttachDbFilename='C:\Users\yuril\source\repos\Jogo-da-Velha\Servidor\Database-Users.mdf';Integrated Security=True");
+
+                // Abrir ligação à Base de Dados
+                conn.Open();
+
+                // Declaração dos parâmetros do comando SQL
+                SqlParameter paramUsername = new SqlParameter("@username", username);
+                SqlParameter paramPoints = new SqlParameter("@points", points);
+
+                // Declaração do comando SQL
+                String sql = "UPDATE Users SET Points = @points WHERE Username = @username";
+
+                // Prepara comando SQL para ser executado na Base de Dados
+                SqlCommand cmd = new SqlCommand(sql, conn);
+
+                // Introduzir valores aos parâmentros registados no comando SQL
+                cmd.Parameters.Add(paramUsername);
+                cmd.Parameters.Add(paramPoints);
+
+                // Executar comando SQL
+                int lines = cmd.ExecuteNonQuery();
+
+                // Fechar ligação
+                conn.Close();
+                if (lines == 0)
+                {
+                    // Se forem devolvidas 0 linhas alteradas então o não foi executado com sucesso
+                    throw new Exception("Erro enquanto atualizava os pontos de um usuário");
+                }
+                Console.WriteLine("Pontos atualizados com sucesso!");
+            }
+            catch (Exception e)
+            {
+                throw new Exception("Erro enquanto atualizava os pontos de um usuário:" + e.Message);
             }
         }
     }
