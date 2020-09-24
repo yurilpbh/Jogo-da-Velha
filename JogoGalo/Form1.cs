@@ -8,6 +8,7 @@ using EI.SI;
 using System.IO;
 using Security;
 using System.Threading;
+using System.Linq;
 
 namespace JogoGalo
 {
@@ -20,6 +21,7 @@ namespace JogoGalo
         string lastMsg;
         securityData protocolSecurity;
         List<Button> buttons;
+        Dictionary<string, int> listaJogadores = new Dictionary<string, int>();
         public Form1()
         {
             InitializeComponent();
@@ -234,6 +236,39 @@ namespace JogoGalo
             atualizaClient(worker, e);
         }
 
+        private Dictionary<string, int> atualizaListaDeJogadores(string lista)
+        {
+            var listaJogadores = new Dictionary<string, int>();
+            string[] jogadores = lista.Split(';');
+            tbJogadores.Text = "";
+            tbPontos.Text = "";
+            foreach (string campo in jogadores) // Atualiza a lista de jogadores na sala
+            {
+                if(campo != "")
+                {
+                    tbJogadores.Text = tbJogadores.Text + campo.Split(',')[0] + Environment.NewLine;
+                    tbPontos.Text = tbPontos.Text + campo.Split(',')[1] + Environment.NewLine;
+                    listaJogadores.Add(campo.Split(',')[0], Convert.ToInt32(campo.Split(',')[1]));
+                }
+            }
+            return listaJogadores;
+        }
+
+        private void atualizaListaDeJogadores(Dictionary<string, int> lista, string jogador, int points)
+        {
+            lista[jogador] = points;
+            var items = from pair in lista
+                        orderby pair.Value descending
+                        select pair;
+            tbJogadores.Text = "";
+            tbPontos.Text = "";
+            foreach (KeyValuePair<string, int> pair in items)
+            {
+                tbJogadores.Text = tbJogadores.Text + pair.Key + Environment.NewLine;
+                tbPontos.Text = tbPontos.Text + pair.Value.ToString() + Environment.NewLine;
+            }
+        }
+
         private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             if (protocolSI.GetCmdType() != ProtocolSICmdType.NACK)
@@ -251,6 +286,7 @@ namespace JogoGalo
                         else if (msg[0]=="2")
                         {
                             tbJogador2.Text = msg[1]; //Atualiza nome do jogador 2
+                            listaJogadores = atualizaListaDeJogadores(msg[2]);
                         }
                         else
                         {
@@ -258,8 +294,9 @@ namespace JogoGalo
                             tbJogador2.Text = msg[2]; //Atualiza nome do jogador 2
                             tbPontos1.Text = msg[3]; //Atualiza pontos do jogador 1
                             tbPontos2.Text = msg[4]; //Atualiza pontos do jogador 2
-                            tbEmpates.Text = msg[5]; //Atualiza pontos empate
+                            tbEmpates.Text = msg[5]; //Atualiza pontos de empate
                             tbProxJogador.Text = msg[6] + Environment.NewLine; //Coloca o jogador na lista de espera
+                            listaJogadores = atualizaListaDeJogadores(msg[7]);
                         }
                         break;
 
@@ -311,17 +348,23 @@ namespace JogoGalo
                         if (msg[0] == tbJogador1.Text) //Jogador 1 ganhou
                         {
                             pontos = int.Parse(tbPontos1.Text) + 1;
-                            tbPontos1.Text = string.Format("{0}", pontos);
+                            tbPontos1.Text = pontos.ToString();
+                            atualizaListaDeJogadores(listaJogadores, tbJogador1.Text, Convert.ToInt32(tbPontos1.Text) + listaJogadores[tbJogador1.Text]);
                         }
                         else if (msg[0] == tbJogador2.Text) //Jogador 2 ganhou
                         {
                             pontos = int.Parse(tbPontos2.Text) + 1;
-                            tbPontos2.Text = string.Format("{0}", pontos);
+                            tbPontos2.Text = pontos.ToString();
+                            atualizaListaDeJogadores(listaJogadores, tbJogador2.Text, Convert.ToInt32(tbPontos2.Text) + listaJogadores[tbJogador2.Text]);
                         }
-                        else //O jogo deu empate e é reiniciado
+                        else if (msg[0] == "") //O jogo deu empate e é reiniciado
                         {
                             pontos = int.Parse(tbEmpates.Text) + 1;
-                            tbEmpates.Text = string.Format("{0}", pontos);
+                            tbEmpates.Text = pontos.ToString();
+                        }
+                        else
+                        {
+                            MessageBox.Show("Algo errado aconteceu");
                         }
                         foreach (Button button in buttons)
                         {
@@ -406,7 +449,14 @@ namespace JogoGalo
             {
                 if (networkStream.CanWrite) { enviaACK(); }
             }
-            backgroundWorker1.RunWorkerAsync();
+            if (e.Cancelled == true)
+            {
+                return;
+            }
+            else
+            {
+                backgroundWorker1.RunWorkerAsync();
+            }
         }
 
         private void jogada(string button, string symbol) //Identifica a jogada feita

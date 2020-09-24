@@ -137,7 +137,7 @@ namespace Room
 
         public int move(int line, int col, string nome)
         {
-            int posJogador = nome == jogador1 ? 0 : 1;
+            int posJogador = nome == jogador1 ? 1 : 2;
             switch (jogo.move(line, col, posJogador))
             {
                 case -1: //Movimento é inválido

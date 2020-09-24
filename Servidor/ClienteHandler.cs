@@ -17,6 +17,7 @@ namespace ClienteHandler
         private ProtocolSI protocolSI;
         private room room;
         private static List<room> rooms = new List<room>();
+        private static string jogadores = "";
         private security security;
         private int clientID;
         private string nomeJogador;
@@ -223,16 +224,7 @@ namespace ClienteHandler
                             networkStream.Write(newJogador, 0, newJogador.Length);
                             esperaACK();
                         }
-                        else if (room.getClientList().Count > 2) //Se tem ao menos 2 jogadores na sala
-                        {
-                            //Coloca os próximos jogadores na fila
-                            room.setJogador(nomeJogador);
-                            msg = String.Format("3/{0}/{1}/{2}/{3}/{4}/{5}", room.getNomeJogador(1), room.getNomeJogador(2), room.getPontos(1), room.getPontos(2), room.getPontos(3), this.nomeJogador);
-                            newJogador = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, security.CifrarTexto(msg));
-                            networkStream.Write(newJogador, 0, newJogador.Length);
-                            esperaACK();
-                        }
-                        else //Se só há 1 jogador na sala
+                        else if (room.getClientList().Count ==  2) //Se tem ao menos 2 jogadores na sala
                         {
                             int posNovoJogador;
                             this.room.setJogador(this.nomeJogador);
@@ -241,7 +233,7 @@ namespace ClienteHandler
                                 if (client.clientID != this.clientID)
                                 {
                                     posNovoJogador = room.getNomeJogador(2) == this.nomeJogador ? 2 : 1; //Descobre qual será a posição do novo jogador
-                                    msg = String.Format("{0}/{1}", posNovoJogador, this.nomeJogador);
+                                    msg = String.Format("{0}/{1}/{2}", posNovoJogador, this.nomeJogador, jogadores);
                                     newJogador = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, client.security.CifrarTexto(msg));
 
                                     connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
@@ -266,6 +258,16 @@ namespace ClienteHandler
                             }
                             //Broadcast que informa que há 2 jogadores na sala e, portanto o jogo pode iniciar
                             broadcast(" ", ProtocolSICmdType.USER_OPTION_3);
+                        }
+                        else //Se só há 1 jogador na sala
+                        {
+                            //Coloca os próximos jogadores na fila
+                            room.setJogador(nomeJogador);
+                            msg = String.Format("3/{0}/{1}/{2}/{3}/{4}/{5}/{6}", room.getNomeJogador(1), room.getNomeJogador(2), room.getPontos(1), room.getPontos(2), room.getPontos(3),
+                                this.nomeJogador, jogadores);
+                            newJogador = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, security.CifrarTexto(msg));
+                            networkStream.Write(newJogador, 0, newJogador.Length);
+                            esperaACK();
                         }
                         break;
                     SalaCheia:
@@ -318,7 +320,7 @@ namespace ClienteHandler
 
                                 case 2://Jogo termina em empate
                                     broadcast(String.Format("{0}{1}/{2}", line, col, symbolPlayer), ProtocolSICmdType.USER_OPTION_5);
-                                    broadcast(String.Format("Empate!", nomeJogador), ProtocolSICmdType.USER_OPTION_6);
+                                    broadcast(String.Format("/Empate!", nomeJogador), ProtocolSICmdType.USER_OPTION_6);
                                     trocaPosicao = trocaDePosicao(trocaPosicao);
                                     break;
 
@@ -361,6 +363,7 @@ namespace ClienteHandler
                             msg = String.Format("{0}/{1}", nomeJogador, security.GetPoints(nomeJogador));
                             byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK, security.CifrarTexto(msg));
                             networkStream.Write(ack, 0, ack.Length);
+                            jogadores = jogadores + nomeJogador + ',' + security.GetPoints(nomeJogador) + ';';
                         }
                         else
                         {
@@ -376,7 +379,7 @@ namespace ClienteHandler
                         if (room != null)
                         {
                             int posJogador = room.getPosJogador(nomeJogador) == 1 ? 1 : 2;
-                            security.setPoints(nomeJogador, room.getPontos(posJogador));
+                            security.setPoints(nomeJogador, room.getPontos(posJogador) + security.GetPoints(nomeJogador));
                             if (room.getClientList().Count == 2)
                             {
                                 connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
@@ -386,9 +389,6 @@ namespace ClienteHandler
                                     {
                                         msg = String.Format("Jogador {0} deixou a sala/{1}", nomeJogador, nomeJogador);
                                         NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
-
-                                        byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK);
-                                        newNetworkStream.Write(ack, 0, ack.Length);
 
                                         msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_9, client.security.CifrarTexto(msg));
                                         newNetworkStream.Write(msgByte, 0, msgByte.Length);

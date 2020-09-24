@@ -56,7 +56,7 @@ namespace Game
         //Faz a jogada executada pelo jogador e verifica se o movimento é válido, se houve empate ou se houve vitória
         public int move(int line, int col, int player)
         {
-            char playerSymbol = player == 0 ? 'X' : 'O';
+            char playerSymbol = player == 1 ? 'X' : 'O';
             if (playerSymbol == ultimoJogador)
             {
                 return 3;
