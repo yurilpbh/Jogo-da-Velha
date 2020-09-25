@@ -7,7 +7,6 @@ using System.Net;
 using EI.SI;
 using System.IO;
 using Security;
-using System.Threading;
 using System.Linq;
 
 namespace JogoGalo
@@ -140,6 +139,7 @@ namespace JogoGalo
             {
                 networkStream.Write(eot, 0, eot.Length);
             }
+            System.Threading.Thread.Sleep(100);
             networkStream.Close();
             tcpClient.Close();
         }
@@ -220,12 +220,10 @@ namespace JogoGalo
                 catch (IOException)
                 {
                     Console.WriteLine("IOException");
-                    
                 }
                 catch (InvalidOperationException)
                 {
                     Console.WriteLine("InvalidOperationException");
-
                 }
             }
         }
@@ -449,14 +447,7 @@ namespace JogoGalo
             {
                 if (networkStream.CanWrite) { enviaACK(); }
             }
-            if (e.Cancelled == true)
-            {
-                return;
-            }
-            else
-            {
-                backgroundWorker1.RunWorkerAsync();
-            }
+            backgroundWorker1.RunWorkerAsync();
         }
 
         private void jogada(string button, string symbol) //Identifica a jogada feita
