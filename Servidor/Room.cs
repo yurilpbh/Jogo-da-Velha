@@ -95,6 +95,16 @@ namespace Room
             }
         }
 
+        public String getProximoJogadores()
+        {
+            String proxJogadores = "";
+            foreach (var jogador in proximoJogador)
+            {
+                proxJogadores = proxJogadores + jogador + ",";
+            }
+            return proxJogadores;
+        }
+
         public void trocaJogadores()
         {
             string aux = jogador1;

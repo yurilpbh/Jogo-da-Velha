@@ -224,7 +224,7 @@ namespace ClienteHandler
                             networkStream.Write(newJogador, 0, newJogador.Length);
                             esperaACK();
                         }
-                        else if (room.getClientList().Count ==  2) //Se tem ao menos 2 jogadores na sala
+                        else if (room.getClientList().Count ==  2) //Se é o 2º jogador a entrar na sala
                         {
                             int posNovoJogador;
                             this.room.setJogador(this.nomeJogador);
@@ -246,9 +246,8 @@ namespace ClienteHandler
                                     networkStream.Write(newJogador, 0, newJogador.Length);
                                     esperaACK();
                                 }
-                                else
+                                else //Envia o nome do jogador que já está na sala para o novo jogador
                                 {
-                                    //Envia o nome do jogador que já está na sala para o novo jogador
                                     int posJogadorPresente = room.getNomeJogador(1) != this.nomeJogador ? 1 : 2;
                                     msg = String.Format("{0}/{1}", posJogadorPresente, room.getNomeJogador(posJogadorPresente));
                                     msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, security.CifrarTexto(msg));
@@ -259,14 +258,16 @@ namespace ClienteHandler
                             //Broadcast que informa que há 2 jogadores na sala e, portanto o jogo pode iniciar
                             broadcast(" ", ProtocolSICmdType.USER_OPTION_3);
                         }
-                        else //Se só há 1 jogador na sala
+                        else //Se a sala já tem 2 jogadores
                         {
                             //Coloca os próximos jogadores na fila
                             room.setJogador(nomeJogador);
                             msg = String.Format("3/{0}/{1}/{2}/{3}/{4}/{5}/{6}", room.getNomeJogador(1), room.getNomeJogador(2), room.getPontos(1), room.getPontos(2), room.getPontos(3),
-                                this.nomeJogador, jogadores);
+                                jogadores, room.getProximoJogadores());
                             newJogador = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, security.CifrarTexto(msg));
                             networkStream.Write(newJogador, 0, newJogador.Length);
+                            msg = String.Format("4/{0}/{1}", jogadores, room.getProximoJogadores());
+                            broadcast(msg, ProtocolSICmdType.USER_OPTION_1);
                             esperaACK();
                         }
                         break;

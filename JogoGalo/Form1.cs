@@ -267,6 +267,19 @@ namespace JogoGalo
             }
         }
 
+        private void atualizaListaProxJogadores(string listaProxJogadores) 
+        {
+            string[] jogadores = listaProxJogadores.Split(',');
+            tbProxJogador.Text = "";
+            foreach (string jogador in jogadores)
+            {
+                if(jogador != "")
+                {
+                    tbProxJogador.Text = tbProxJogador.Text + jogador + Environment.NewLine;
+                }
+            }
+        }
+
         private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             if (protocolSI.GetCmdType() != ProtocolSICmdType.NACK)
@@ -286,15 +299,20 @@ namespace JogoGalo
                             tbJogador2.Text = msg[1]; //Atualiza nome do jogador 2
                             listaJogadores = atualizaListaDeJogadores(msg[2]);
                         }
-                        else
+                        else if (msg[0]=="3")
                         {
                             tbJogador1.Text = msg[1]; //Atualiza nome do jogador 1
                             tbJogador2.Text = msg[2]; //Atualiza nome do jogador 2
                             tbPontos1.Text = msg[3]; //Atualiza pontos do jogador 1
                             tbPontos2.Text = msg[4]; //Atualiza pontos do jogador 2
                             tbEmpates.Text = msg[5]; //Atualiza pontos de empate
-                            tbProxJogador.Text = msg[6] + Environment.NewLine; //Coloca o jogador na lista de espera
-                            listaJogadores = atualizaListaDeJogadores(msg[7]);
+                            listaJogadores = atualizaListaDeJogadores(msg[6]);
+                            atualizaListaProxJogadores(msg[7]); //Atualiza os jogadores da lista de espera
+                        }
+                        else
+                        {
+                            listaJogadores = atualizaListaDeJogadores(msg[1]);
+                            atualizaListaProxJogadores(msg[2]); //Atualiza os jogadores da lista de espera
                         }
                         break;
 
