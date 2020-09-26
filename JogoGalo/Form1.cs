@@ -280,6 +280,23 @@ namespace JogoGalo
             }
         }
 
+        private void chamaProxJogador(string winner)
+        {
+            if(winner == tbJogador1.Text)
+            {
+                tbProxJogador.Text = tbJogador2.Text + Environment.NewLine;
+                tbJogador2.Text = tbProxJogador.Text.Split('\n')[0];
+                tbPontos2.Text = "0";
+            }
+            else
+            {
+                tbProxJogador.Text = tbJogador1.Text + Environment.NewLine;
+                tbJogador1.Text = tbProxJogador.Text.Split('\n')[0];
+                tbPontos1.Text = "0";
+            }
+            tbProxJogador.Text.Replace(tbProxJogador.Text.Split('\n')[0], "");
+        }
+
         private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             if (protocolSI.GetCmdType() != ProtocolSICmdType.NACK)
@@ -293,6 +310,10 @@ namespace JogoGalo
                         if (msg[0]=="1")
                         {
                             tbJogador1.Text = msg[1]; //Atualiza nome do jogador 1
+                            if (msg[2].Equals("true"))
+                            {
+                                btVarJogadores.Enabled = false;
+                            }
                         }
                         else if (msg[0]=="2")
                         {
@@ -301,6 +322,8 @@ namespace JogoGalo
                         }
                         else if (msg[0]=="3")
                         {
+                            btVarJogadores.Enabled = false;
+                            btTrocarPosicao.Enabled = false;
                             tbJogador1.Text = msg[1]; //Atualiza nome do jogador 1
                             tbJogador2.Text = msg[2]; //Atualiza nome do jogador 2
                             tbPontos1.Text = msg[3]; //Atualiza pontos do jogador 1
@@ -366,12 +389,20 @@ namespace JogoGalo
                             pontos = int.Parse(tbPontos1.Text) + 1;
                             tbPontos1.Text = pontos.ToString();
                             atualizaListaDeJogadores(listaJogadores, tbJogador1.Text, Convert.ToInt32(tbPontos1.Text) + listaJogadores[tbJogador1.Text]);
+                            if(btVarJogadores.Enabled == true)
+                            {
+                                chamaProxJogador(tbJogador1.Text);
+                            }
                         }
                         else if (msg[0] == tbJogador2.Text) //Jogador 2 ganhou
                         {
                             pontos = int.Parse(tbPontos2.Text) + 1;
                             tbPontos2.Text = pontos.ToString();
                             atualizaListaDeJogadores(listaJogadores, tbJogador2.Text, Convert.ToInt32(tbPontos2.Text) + listaJogadores[tbJogador2.Text]);
+                            if (btVarJogadores.Enabled == true)
+                            {
+                                chamaProxJogador(tbJogador2.Text);
+                            }
                         }
                         else if (msg[0] == "") //O jogo deu empate e é reiniciado
                         {
@@ -405,6 +436,7 @@ namespace JogoGalo
                                     aux = tbPontos1.Text;
                                     tbPontos1.Text = tbPontos2.Text;
                                     tbPontos2.Text = aux;
+                                    btVarJogadores.Enabled = false;
                                     break;
                                 case DialogResult.No:
                                     byte[] recuso = protocolSI.Make(ProtocolSICmdType.USER_OPTION_2);

@@ -23,6 +23,7 @@ namespace ClienteHandler
         private string nomeJogador;
         private byte[] simetricKey;
         private byte[] IV;
+        private bool multiplePlayers = false;
 
         public ClientHandler(TcpClient client, int clientID)
         {
@@ -219,7 +220,7 @@ namespace ClienteHandler
                         {
                             //Coloca o jogador como o jogador 1
                             room.setJogador(nomeJogador);
-                            msg = String.Format("1/{0}", nomeJogador);
+                            msg = String.Format("1/{0}/", nomeJogador);
                             newJogador = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, security.CifrarTexto(msg));
                             networkStream.Write(newJogador, 0, newJogador.Length);
                             esperaACK();
@@ -249,7 +250,7 @@ namespace ClienteHandler
                                 else //Envia o nome do jogador que já está na sala para o novo jogador
                                 {
                                     int posJogadorPresente = room.getNomeJogador(1) != this.nomeJogador ? 1 : 2;
-                                    msg = String.Format("{0}/{1}", posJogadorPresente, room.getNomeJogador(posJogadorPresente));
+                                    msg = String.Format("{0}/{1}/{2}", posJogadorPresente, room.getNomeJogador(posJogadorPresente), true == room.isMultiplePlayers() ? "true" : "false");
                                     msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, security.CifrarTexto(msg));
                                     networkStream.Write(msgByte, 0, msgByte.Length);
                                     esperaACK();
@@ -262,8 +263,8 @@ namespace ClienteHandler
                         {
                             //Coloca os próximos jogadores na fila
                             room.setJogador(nomeJogador);
-                            msg = String.Format("3/{0}/{1}/{2}/{3}/{4}/{5}/{6}", room.getNomeJogador(1), room.getNomeJogador(2), room.getPontos(1), room.getPontos(2), room.getPontos(3),
-                                jogadores, room.getProximoJogadores());
+                            msg = String.Format("3/{0}/{1}/{2}/{3}/{4}/{5}/{6}", room.getNomeJogador(1), room.getNomeJogador(2), room.getPontos(room.getNomeJogador(1)), 
+                                room.getPontos(room.getNomeJogador(2)), room.getPontos("empates"), jogadores, room.getProximoJogadores());
                             newJogador = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, security.CifrarTexto(msg));
                             networkStream.Write(newJogador, 0, newJogador.Length);
                             msg = String.Format("4/{0}/{1}", jogadores, room.getProximoJogadores());
@@ -350,7 +351,7 @@ namespace ClienteHandler
                         break;
 
                     case ProtocolSICmdType.USER_OPTION_6: //Jogador solicitou permitir vários jogadores
-                        room.multiplePlayers();
+                        multiplePlayers = room.multiplePlayers();
                         msg = "Múltiplos jogadores habilitado";
                         broadcast(msg, ProtocolSICmdType.USER_OPTION_8);
                         break;
@@ -379,8 +380,7 @@ namespace ClienteHandler
                         Console.WriteLine("Ending Thread from {0}", nomeJogador);
                         if (room != null)
                         {
-                            int posJogador = room.getPosJogador(nomeJogador) == 1 ? 1 : 2;
-                            security.setPoints(nomeJogador, room.getPontos(posJogador) + security.GetPoints(nomeJogador));
+                            security.setPoints(nomeJogador, room.getPontos(nomeJogador) + security.GetPoints(nomeJogador));
                             if (room.getClientList().Count == 2)
                             {
                                 connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast

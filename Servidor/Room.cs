@@ -15,6 +15,7 @@ namespace Room
         private int pontosJog1, pontosJog2, pontosEmp;
         private List<string> proximoJogador = new List<string>();
         private List<ClientHandler> clientsList = new List<ClientHandler>();
+        private Dictionary<string, int> pontuacaoJogadores = new Dictionary<string, int>();
         public Jogo jogo;
         private Boolean allowMultiplePlayers = false;
 
@@ -61,6 +62,10 @@ namespace Room
             else
             {
                 proximoJogador.Add(nome);
+            }
+            if (!pontuacaoJogadores.ContainsKey(nome))
+            {
+                pontuacaoJogadores.Add(nome, 0);
             }
         }
         public string getNomeJogador(int pos)
@@ -128,10 +133,15 @@ namespace Room
             return false;
         }
 
-        public void multiplePlayers()
+        public Boolean multiplePlayers()
         {
-            if (allowMultiplePlayers) { return; }
             allowMultiplePlayers = true;
+            return true;
+        }
+
+        public Boolean isMultiplePlayers()
+        {
+            return allowMultiplePlayers;
         }
 
         public List<ClientHandler> getClientList()
@@ -168,6 +178,7 @@ namespace Room
 
                 case 3: //Jogador incorreto tentou fazer o movimento
                     return 3;
+
                 default:
                     return 4;
             }
@@ -184,28 +195,42 @@ namespace Room
             {
                 case 1:
                     pontosJog1++;
+                    if (allowMultiplePlayers)
+                    {
+                        proximoJogador.Add(jogador2);
+                        pontuacaoJogadores[jogador2] = pontosJog2 + pontuacaoJogadores[jogador2];
+                        jogador2 = proximoJogador.ElementAt(0);
+                        proximoJogador.RemoveAt(0);
+                        pontosJog2 = 0;
+                        pontosEmp = 0;
+                    }
                     break;
                 case 2:
                     pontosJog2++;
+                    if (allowMultiplePlayers)
+                    {
+                        proximoJogador.Add(jogador1);
+                        pontuacaoJogadores[jogador1] = pontosJog1 + pontuacaoJogadores[jogador1];
+                        jogador1 = proximoJogador.ElementAt(0);
+                        proximoJogador.RemoveAt(0);
+                        pontosJog1 = 0;
+                        pontosEmp = 0;
+                    }
                     break;
                 case 3:
                     pontosEmp++;
                     break;
             }
-
         }
-        public int getPontos(int quais)
+        public int getPontos(string quem)
         {
-            switch (quais)
+            if(quem != "empates")
             {
-                case 1:
-                    return pontosJog1;
-                case 2:
-                    return pontosJog2;
-                case 3:
-                    return pontosEmp;
-                default:
-                    return 0;
+                return pontuacaoJogadores[quem];
+            }
+            else
+            {
+                return pontosEmp;
             }
         }
     }
