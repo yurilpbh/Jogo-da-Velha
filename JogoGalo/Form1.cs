@@ -38,10 +38,7 @@ namespace JogoGalo
             buttons.Add(bt00); buttons.Add(bt01); buttons.Add(bt02);
             buttons.Add(bt10); buttons.Add(bt11); buttons.Add(bt12);
             buttons.Add(bt20); buttons.Add(bt21); buttons.Add(bt22);
-            foreach(Button button in buttons) //Desabilita todos os botões de jogadas
-            {
-                button.Enabled = false;
-            }
+            setButtons(false);
             //Inicializa o background que é responsável por ficar a escuta do servidor
             BackgroundWorker backgroundWorker1 = new BackgroundWorker();
             backgroundWorker1.DoWork += new DoWorkEventHandler(backgroundWorker1_DoWork);
@@ -83,6 +80,15 @@ namespace JogoGalo
             enviaACK();
             protocolSecurity.setIV(protocolSI.GetStringFromData());
 
+        }
+
+        private void setButtons(bool valor)
+        {
+            foreach (Button button in buttons) //Desabilita todos os botões de jogadas
+            {
+                button.Text = "";
+                button.Enabled = valor;
+            }
         }
 
         private void tbLogin_Click(object sender, EventArgs e)
@@ -284,17 +290,17 @@ namespace JogoGalo
         {
             if(winner == tbJogador1.Text)
             {
-                tbProxJogador.Text = tbJogador2.Text + Environment.NewLine;
-                tbJogador2.Text = tbProxJogador.Text.Split('\n')[0];
+                tbProxJogador.Text = tbProxJogador.Text + tbJogador2.Text + Environment.NewLine;
+                tbJogador2.Text = tbProxJogador.Text.Split('\n')[0].Split('\r')[0];
                 tbPontos2.Text = "0";
             }
             else
             {
-                tbProxJogador.Text = tbJogador1.Text + Environment.NewLine;
-                tbJogador1.Text = tbProxJogador.Text.Split('\n')[0];
+                tbProxJogador.Text = tbProxJogador.Text + tbJogador1.Text + Environment.NewLine;
+                tbJogador1.Text = tbProxJogador.Text.Split('\n')[0].Split('\r')[0];
                 tbPontos1.Text = "0";
             }
-            tbProxJogador.Text.Replace(tbProxJogador.Text.Split('\n')[0], "");
+            tbProxJogador.Text = tbProxJogador.Text.Replace(tbProxJogador.Text.Split('\n')[0]+"\n", "");
         }
 
         private void backgroundWorker1_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -349,11 +355,7 @@ namespace JogoGalo
                         }
                         tbJogador2.Text = "";
                         tbPontos2.Text = "";
-                        foreach (Button button in buttons)
-                        {
-                            button.Text = "";
-                            button.Enabled = false;
-                        }
+                        setButtons(false);
                         break;
 
                     case ProtocolSICmdType.DATA: //Atualiza o chat
@@ -361,10 +363,7 @@ namespace JogoGalo
                         break;
 
                     case ProtocolSICmdType.USER_OPTION_3: //Habilita os botões de jogo
-                        foreach (Button button in buttons)
-                        {
-                            button.Enabled = true;
-                        }
+                        setButtons(true);
                         //Mantém os pontos do jogador que está na sala
                         tbPontos1.Text = tbPontos1.Text == "" ? "0" : tbPontos1.Text;
                         tbPontos2.Text = "0";
@@ -384,14 +383,29 @@ namespace JogoGalo
                         msg = lastMsg.Split('/');
                         MessageBox.Show(msg[0] + " " + msg[1]);
                         int pontos = 0;
-                        if (msg[0] == tbJogador1.Text) //Jogador 1 ganhou
+                        if (msg[0] == "") //O jogo deu empate e é reiniciado
+                        {
+                            pontos = int.Parse(tbEmpates.Text) + 1;
+                            tbEmpates.Text = pontos.ToString();
+                        }
+                        else if (msg[0] == tbJogador1.Text) //Jogador 1 ganhou
                         {
                             pontos = int.Parse(tbPontos1.Text) + 1;
                             tbPontos1.Text = pontos.ToString();
                             atualizaListaDeJogadores(listaJogadores, tbJogador1.Text, Convert.ToInt32(tbPontos1.Text) + listaJogadores[tbJogador1.Text]);
-                            if(btVarJogadores.Enabled == true)
+                            if(btVarJogadores.Enabled == false)
                             {
+                                if(tbJogador2.Text == tbUsuario.Text)
+                                {
+                                    setButtons(false);
+                                    btTrocarPosicao.Enabled = false;
+                                }
                                 chamaProxJogador(tbJogador1.Text);
+                                if (tbJogador2.Text == tbUsuario.Text)
+                                {
+                                    setButtons(true);
+                                    btTrocarPosicao.Enabled = true;
+                                }
                             }
                         }
                         else if (msg[0] == tbJogador2.Text) //Jogador 2 ganhou
@@ -399,24 +413,29 @@ namespace JogoGalo
                             pontos = int.Parse(tbPontos2.Text) + 1;
                             tbPontos2.Text = pontos.ToString();
                             atualizaListaDeJogadores(listaJogadores, tbJogador2.Text, Convert.ToInt32(tbPontos2.Text) + listaJogadores[tbJogador2.Text]);
-                            if (btVarJogadores.Enabled == true)
+                            if (btVarJogadores.Enabled == false)
                             {
+                                if (tbJogador1.Text == tbUsuario.Text)
+                                {
+                                    setButtons(false);
+                                    btTrocarPosicao.Enabled = false;
+                                }
                                 chamaProxJogador(tbJogador2.Text);
+                                if (tbJogador1.Text == tbUsuario.Text)
+                                {
+                                    setButtons(true);
+                                    btTrocarPosicao.Enabled = true;
+                                }
                             }
-                        }
-                        else if (msg[0] == "") //O jogo deu empate e é reiniciado
-                        {
-                            pontos = int.Parse(tbEmpates.Text) + 1;
-                            tbEmpates.Text = pontos.ToString();
                         }
                         else
                         {
                             MessageBox.Show("Algo errado aconteceu");
+                            break;
                         }
-                        foreach (Button button in buttons)
+                        if (btVarJogadores.Enabled == true || msg[0] == tbUsuario.Text)
                         {
-                            button.Text = "";
-                            button.Enabled = true;
+                            setButtons(true);
                         }
                         break;
 
