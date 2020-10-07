@@ -441,21 +441,14 @@ namespace JogoGalo
 
                     case ProtocolSICmdType.USER_OPTION_7: //Troca de posição
                         msg = lastMsg.Split('/');
-                        if(msg.Length == 1) //Usuário solicitou a troca
+                        if(msg[0] == "0") //Usuário solicitou a troca
                         {
-                            DialogResult result = MessageBox.Show(msg[0],"Solicitação de troca", MessageBoxButtons.YesNo);
+                            DialogResult result = MessageBox.Show(msg[1],"Solicitação de troca", MessageBoxButtons.YesNo);
                             switch (result)
                             {
                                 case DialogResult.Yes:
                                     byte[] aceito = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1);
                                     networkStream.Write(aceito, 0, aceito.Length);
-                                    string aux = tbJogador1.Text;
-                                    tbJogador1.Text = tbJogador2.Text;
-                                    tbJogador2.Text = aux;
-                                    aux = tbPontos1.Text;
-                                    tbPontos1.Text = tbPontos2.Text;
-                                    tbPontos2.Text = aux;
-                                    btVarJogadores.Enabled = false;
                                     break;
                                 case DialogResult.No:
                                     byte[] recuso = protocolSI.Make(ProtocolSICmdType.USER_OPTION_2);
@@ -464,11 +457,8 @@ namespace JogoGalo
                                 default:
                                     break;
                             }
-                        } else if (msg[0] == "0") //Solicitação negada
-                        {
-                            MessageBox.Show(msg[1]);
-                            btTrocarPosicao.Enabled = true;
-                        } else //Solicitação aceita
+                        }
+                        else if (msg[0] == "1") //Solicitação aceita 
                         {
                             MessageBox.Show(msg[1]);
                             string aux = tbJogador1.Text;
@@ -478,6 +468,20 @@ namespace JogoGalo
                             tbPontos1.Text = tbPontos2.Text;
                             tbPontos2.Text = aux;
                             btTrocarPosicao.Enabled = true;
+
+                        } else if (msg[0] == "2") //Solicitação negada
+                        {
+                            MessageBox.Show(msg[1]);
+                            btTrocarPosicao.Enabled = true;
+                        } 
+                        else //Se a solicitação foi aceita atualiza os jogadores
+                        {
+                            string aux = tbJogador1.Text;
+                            tbJogador1.Text = tbJogador2.Text;
+                            tbJogador2.Text = aux;
+                            aux = tbPontos1.Text;
+                            tbPontos1.Text = tbPontos2.Text;
+                            tbPontos2.Text = aux;
                         }
                         break;
 

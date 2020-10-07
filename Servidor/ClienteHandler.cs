@@ -23,7 +23,6 @@ namespace ClienteHandler
         private string nomeJogador;
         private byte[] simetricKey;
         private byte[] IV;
-        private bool multiplePlayers = false;
 
         public ClientHandler(TcpClient client, int clientID)
         {
@@ -70,26 +69,29 @@ namespace ClienteHandler
 
         }
 
-        public void broadcast(string msg, ProtocolSICmdType cmd) //Faz um broadcast para todos os jogadores
+        public void broadcast(string msg, ProtocolSICmdType cmd, string except = "") //Faz um broadcast para todos os jogadores
         {
             connection.WaitOne(); //Adquire controle do networkStream
             byte[] msgToSend;
             NetworkStream networkStream = tcpClient.GetStream();
             foreach (ClientHandler client in room.getClientList())
             {
-                NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para o client
+                if (!client.nomeJogador.Equals(except))
+                {
+                    NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para o client
 
-                byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK);
-                newNetworkStream.Write(ack, 0, ack.Length);
+                    byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK);
+                    newNetworkStream.Write(ack, 0, ack.Length);
 
-                msgToSend = protocolSI.Make(cmd, client.security.CifrarTexto(msg));
-                newNetworkStream.Write(msgToSend, 0, msgToSend.Length);
-                esperaACK();
+                    msgToSend = protocolSI.Make(cmd, client.security.CifrarTexto(msg));
+                    newNetworkStream.Write(msgToSend, 0, msgToSend.Length);
+                    esperaACK();
+                }
             }
             connection.ReleaseMutex(); //Libera o networkStream
         }
 
-        private Boolean trocaDePosicao(Boolean solicitou)
+        private bool trocaDePosicao(bool solicitou)
         {
             if (solicitou)
             {
@@ -100,48 +102,52 @@ namespace ClienteHandler
                     byte[] msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
                     networkStream.Write(msgByte, 0, msgByte.Length);
                     esperaACK();
-                    return false;
-                }
-                string outroJogador = room.getNomeJogador(room.getPosJogador(nomeJogador) == 1 ? 2 : 1);
-                foreach (ClientHandler client in this.room.getClientList())
+                    return true;
+                } else
                 {
-                    if (client.nomeJogador == outroJogador)
+                    string outroJogador = room.getNomeJogador(room.getPosJogador(nomeJogador) == 1 ? 2 : 1);
+                    foreach (ClientHandler client in this.room.getClientList())
                     {
-                        string msg = String.Format("O jogador {0} solicitou trocar de posição, você aceita?", this.nomeJogador);
-                        byte[] msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
-
-                        connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
-                        NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
-
-                        byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK);
-                        newNetworkStream.Write(ack, 0, ack.Length);
-
-                        newNetworkStream.Write(msgByte, 0, msgByte.Length);
-                        newNetworkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
-
-                        ProtocolSICmdType protocolSICmdType = protocolSI.GetCmdType();
-                        while (protocolSICmdType != ProtocolSICmdType.USER_OPTION_1 && protocolSICmdType != ProtocolSICmdType.USER_OPTION_2)
+                        if (client.nomeJogador.Equals(outroJogador))
                         {
+                            string msg = String.Format("0/O jogador {0} solicitou trocar de posição, você aceita?", nomeJogador);
+                            byte[] msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
+
+                            connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
+                            NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
+
+                            byte[] ack = protocolSI.Make(ProtocolSICmdType.ACK);
+                            newNetworkStream.Write(ack, 0, ack.Length);
+                            Thread.Sleep(100);
+                            newNetworkStream.Write(msgByte, 0, msgByte.Length);
                             newNetworkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
-                            protocolSICmdType = protocolSI.GetCmdType();
-                        }  
-                        connection.ReleaseMutex(); //Libera o networkStream
-                        if (protocolSICmdType == ProtocolSICmdType.USER_OPTION_1)
-                        {
-                            msg = "1/Solicitação aceita";
-                            msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
-                            networkStream.Write(msgByte, 0, msgByte.Length);
-                            esperaACK();
-                            room.trocaJogadores();
+
+                            ProtocolSICmdType protocolSICmdType = protocolSI.GetCmdType();
+                            while (protocolSICmdType != ProtocolSICmdType.USER_OPTION_1 && protocolSICmdType != ProtocolSICmdType.USER_OPTION_2)
+                            {
+                                newNetworkStream.Read(protocolSI.Buffer, 0, protocolSI.Buffer.Length);
+                                protocolSICmdType = protocolSI.GetCmdType();
+                            }
+                            connection.ReleaseMutex(); //Libera o networkStream
+                            if (protocolSICmdType == ProtocolSICmdType.USER_OPTION_1)
+                            {
+                                msg = "1/Solicitação aceita";
+                                msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
+                                networkStream.Write(msgByte, 0, msgByte.Length);
+                                broadcast("", ProtocolSICmdType.USER_OPTION_7, nomeJogador);
+                                esperaACK();
+                                room.trocaJogadores();
+                                return true;
+                            }
+                            else
+                            {
+                                msg = "2/Solicitação negada";
+                                msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
+                                networkStream.Write(msgByte, 0, msgByte.Length);
+                                esperaACK();
+                                return false;
+                            }
                         }
-                        else
-                        {
-                            msg = "0/Solicitação negada";
-                            msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_7, security.CifrarTexto(msg));
-                            networkStream.Write(msgByte, 0, msgByte.Length);
-                            esperaACK();
-                        }
-                        break;
                     }
                 }
             }
@@ -206,8 +212,8 @@ namespace ClienteHandler
 
                         if (room == null) //Cria a sala caso a mesma não exista
                         {
-                            this.room = new room(salaDesejada);
-                            rooms.Add(this.room);
+                            room = new room(salaDesejada);
+                            rooms.Add(room);
                             room.addClientToRoom(this);
                             msg = System.DateTime.Now.ToString();
                             room.writeLog(msg);
@@ -228,20 +234,16 @@ namespace ClienteHandler
                         else if (room.getClientList().Count ==  2) //Se é o 2º jogador a entrar na sala
                         {
                             int posNovoJogador;
-                            this.room.setJogador(this.nomeJogador);
-                            foreach (ClientHandler client in this.room.getClientList())
+                            room.setJogador(nomeJogador);
+                            foreach (ClientHandler client in room.getClientList())
                             {
-                                if (client.clientID != this.clientID)
+                                if (client.clientID != clientID)
                                 {
-                                    posNovoJogador = room.getNomeJogador(2) == this.nomeJogador ? 2 : 1; //Descobre qual será a posição do novo jogador
-                                    msg = String.Format("{0}/{1}/{2}", posNovoJogador, this.nomeJogador, jogadores);
+                                    posNovoJogador = room.getNomeJogador(2) == nomeJogador ? 2 : 1; //Descobre qual será a posição do novo jogador
+                                    msg = String.Format("{0}/{1}/{2}", posNovoJogador, nomeJogador, jogadores);
                                     newJogador = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, client.security.CifrarTexto(msg));
 
-                                    connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
-                                    NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
-                                    newNetworkStream.Write(newJogador, 0, newJogador.Length); //Envia o novo jogador para o jogador que já está na sala
-                                    esperaACK();
-                                    connection.ReleaseMutex(); //Libera o networkStream
+                                    broadcast(msg, ProtocolSICmdType.USER_OPTION_1, nomeJogador);
 
                                     //Coloca-se na posição que resta
                                     networkStream.Write(newJogador, 0, newJogador.Length);
@@ -249,7 +251,7 @@ namespace ClienteHandler
                                 }
                                 else //Envia o nome do jogador que já está na sala para o novo jogador
                                 {
-                                    int posJogadorPresente = room.getNomeJogador(1) != this.nomeJogador ? 1 : 2;
+                                    int posJogadorPresente = room.getNomeJogador(1) != nomeJogador ? 1 : 2;
                                     msg = String.Format("{0}/{1}/{2}", posJogadorPresente, room.getNomeJogador(posJogadorPresente), true == room.isMultiplePlayers() ? "true" : "false");
                                     msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_1, security.CifrarTexto(msg));
                                     networkStream.Write(msgByte, 0, msgByte.Length);
@@ -316,14 +318,18 @@ namespace ClienteHandler
 
                                 case 1: //Jogo termina com um ganhador
                                     broadcast(String.Format("{0}{1}/{2}", line, col, symbolPlayer), ProtocolSICmdType.USER_OPTION_5);
+                                    Thread.Sleep(100);
                                     broadcast(String.Format("{0}/ganhou!", nomeJogador), ProtocolSICmdType.USER_OPTION_6);
-                                    trocaPosicao = trocaDePosicao(trocaPosicao);
+                                    Thread.Sleep(100);
+                                    trocaPosicao = !trocaDePosicao(trocaPosicao);
                                     break;
 
                                 case 2://Jogo termina em empate
                                     broadcast(String.Format("{0}{1}/{2}", line, col, symbolPlayer), ProtocolSICmdType.USER_OPTION_5);
+                                    Thread.Sleep(100);
                                     broadcast(String.Format("/Empate!", nomeJogador), ProtocolSICmdType.USER_OPTION_6);
-                                    trocaPosicao = trocaDePosicao(trocaPosicao);
+                                    Thread.Sleep(100);
+                                    trocaPosicao = !trocaDePosicao(trocaPosicao);
                                     break;
 
                                 case 3: //Jogador incorreto tentou fazer o movimento
@@ -351,7 +357,7 @@ namespace ClienteHandler
                         break;
 
                     case ProtocolSICmdType.USER_OPTION_6: //Jogador solicitou permitir vários jogadores
-                        multiplePlayers = room.multiplePlayers();
+                        room.multiplePlayers();
                         msg = "Múltiplos jogadores habilitado";
                         broadcast(msg, ProtocolSICmdType.USER_OPTION_8);
                         break;
@@ -383,19 +389,8 @@ namespace ClienteHandler
                             security.setPoints(nomeJogador, room.getPontos(nomeJogador) + security.GetPoints(nomeJogador));
                             if (room.getClientList().Count >= 2)
                             {
-                                connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
-                                foreach (ClientHandler client in this.room.getClientList()) //Faz um broadcast para atualizar todos os jogadores
-                                {
-                                    if (client.clientID != this.clientID)
-                                    {
-                                        msg = String.Format("Jogador {0} deixou a sala/{1}", nomeJogador, nomeJogador);
-                                        NetworkStream newNetworkStream = client.tcpClient.GetStream(); //Cria uma nova via de comunicação para aquele client
-
-                                        msgByte = protocolSI.Make(ProtocolSICmdType.USER_OPTION_9, client.security.CifrarTexto(msg));
-                                        newNetworkStream.Write(msgByte, 0, msgByte.Length);
-                                    }
-                                }
-                                connection.ReleaseMutex(); //Libera o networkStream
+                                msg = String.Format("Jogador {0} deixou a sala/{1}", nomeJogador, nomeJogador);
+                                broadcast(msg, ProtocolSICmdType.USER_OPTION_9, nomeJogador);
                             }
                         }
                         room.novoJogo();
