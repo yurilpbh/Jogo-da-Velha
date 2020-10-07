@@ -8,6 +8,7 @@ using EI.SI;
 using System.IO;
 using Security;
 using System.Linq;
+using System.Threading;
 
 namespace JogoGalo
 {
@@ -309,6 +310,7 @@ namespace JogoGalo
             {
                 lastMsg = protocolSecurity.decifrarMensagem(protocolSI.GetStringFromData());
                 string[] msg;
+                Thread tMessageBox;
                 switch (protocolSI.GetCmdType())
                 {
                     case ProtocolSICmdType.USER_OPTION_1: //Atualiza nome dos jogadores
@@ -347,7 +349,8 @@ namespace JogoGalo
 
                     case ProtocolSICmdType.USER_OPTION_2: //Ocorre quando um jogador sai da sala
                         msg = lastMsg.Split('/');
-                        MessageBox.Show(String.Format("{0} deixou a sala", msg[0]));
+                        tMessageBox = new Thread(() => MessageBox.Show(String.Format("{0} deixou a sala", msg[0])));
+                        tMessageBox.Start();
                         if (msg[1].Equals("1")) //Se o jogador que deixou a sala for o primeiro, o atual passa a esse lugar
                         {
                             tbJogador1.Text = tbJogador2.Text;
@@ -371,7 +374,8 @@ namespace JogoGalo
                         break;
 
                     case ProtocolSICmdType.USER_OPTION_4: //Jogadas ou movimento inválidos
-                        MessageBox.Show(lastMsg);
+                        tMessageBox = new Thread(() => MessageBox.Show(lastMsg));
+                        tMessageBox.Start();
                         break;
 
                     case ProtocolSICmdType.USER_OPTION_5: //Atualiza a jogada feita
@@ -381,7 +385,8 @@ namespace JogoGalo
 
                     case ProtocolSICmdType.USER_OPTION_6: //Diz quem ganhou e reinicia o jogo
                         msg = lastMsg.Split('/');
-                        MessageBox.Show(msg[0] + " " + msg[1]);
+                        tMessageBox = new Thread(() => MessageBox.Show(msg[0] + " " + msg[1]));
+                        tMessageBox.Start();
                         int pontos = 0;
                         if (msg[0] == "") //O jogo deu empate e é reiniciado
                         {
@@ -430,7 +435,8 @@ namespace JogoGalo
                         }
                         else
                         {
-                            MessageBox.Show("Algo errado aconteceu");
+                            tMessageBox = new Thread(() => MessageBox.Show("Algo errado aconteceu"));
+                            tMessageBox.Start();
                             break;
                         }
                         if (btVarJogadores.Enabled == true || msg[0] == tbUsuario.Text)
@@ -443,7 +449,7 @@ namespace JogoGalo
                         msg = lastMsg.Split('/');
                         if(msg[0] == "0") //Usuário solicitou a troca
                         {
-                            DialogResult result = MessageBox.Show(msg[1],"Solicitação de troca", MessageBoxButtons.YesNo);
+                            DialogResult result = MessageBox.Show(msg[1], "Solicitação de troca", MessageBoxButtons.YesNo);
                             switch (result)
                             {
                                 case DialogResult.Yes:
@@ -460,7 +466,8 @@ namespace JogoGalo
                         }
                         else if (msg[0] == "1") //Solicitação aceita 
                         {
-                            MessageBox.Show(msg[1]);
+                            tMessageBox = new Thread(() => MessageBox.Show(msg[1]));
+                            tMessageBox.Start();
                             string aux = tbJogador1.Text;
                             tbJogador1.Text = tbJogador2.Text;
                             tbJogador2.Text = aux;
@@ -471,7 +478,8 @@ namespace JogoGalo
 
                         } else if (msg[0] == "2") //Solicitação negada
                         {
-                            MessageBox.Show(msg[1]);
+                            tMessageBox = new Thread(() => MessageBox.Show(msg[1]));
+                            tMessageBox.Start();
                             btTrocarPosicao.Enabled = true;
                         } 
                         else //Se a solicitação foi aceita atualiza os jogadores
@@ -487,7 +495,8 @@ namespace JogoGalo
 
                     case ProtocolSICmdType.USER_OPTION_8:
                         btVarJogadores.Enabled = false;
-                        MessageBox.Show(lastMsg);
+                        tMessageBox = new Thread(() => MessageBox.Show(lastMsg));
+                        tMessageBox.Start();
                         break;
 
                     case ProtocolSICmdType.USER_OPTION_9:
