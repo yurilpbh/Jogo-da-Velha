@@ -381,7 +381,7 @@ namespace ClienteHandler
                         if (room != null)
                         {
                             security.setPoints(nomeJogador, room.getPontos(nomeJogador) + security.GetPoints(nomeJogador));
-                            if (room.getClientList().Count == 2)
+                            if (room.getClientList().Count >= 2)
                             {
                                 connection.WaitOne(); //Adquire controle único do networkStream para fazer o broadcast
                                 foreach (ClientHandler client in this.room.getClientList()) //Faz um broadcast para atualizar todos os jogadores
