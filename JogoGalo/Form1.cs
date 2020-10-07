@@ -392,7 +392,7 @@ namespace JogoGalo
                         {
                             pontos = int.Parse(tbPontos1.Text) + 1;
                             tbPontos1.Text = pontos.ToString();
-                            atualizaListaDeJogadores(listaJogadores, tbJogador1.Text, Convert.ToInt32(tbPontos1.Text) + listaJogadores[tbJogador1.Text]);
+                            atualizaListaDeJogadores(listaJogadores, tbJogador1.Text, listaJogadores[tbJogador1.Text]+1);
                             if(btVarJogadores.Enabled == false)
                             {
                                 if(tbJogador2.Text == tbUsuario.Text)
@@ -412,7 +412,7 @@ namespace JogoGalo
                         {
                             pontos = int.Parse(tbPontos2.Text) + 1;
                             tbPontos2.Text = pontos.ToString();
-                            atualizaListaDeJogadores(listaJogadores, tbJogador2.Text, Convert.ToInt32(tbPontos2.Text) + listaJogadores[tbJogador2.Text]);
+                            atualizaListaDeJogadores(listaJogadores, tbJogador2.Text, listaJogadores[tbJogador2.Text]+1);
                             if (btVarJogadores.Enabled == false)
                             {
                                 if (tbJogador1.Text == tbUsuario.Text)

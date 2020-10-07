@@ -189,9 +189,9 @@ namespace Room
             jogo = new Jogo();
         }
 
-        private void ganhador(int quem)
+        private void ganhador(int jogador)
         {
-            switch (quem)
+            switch (jogador)
             {
                 case 1:
                     pontosJog1++;
@@ -224,8 +224,16 @@ namespace Room
         }
         public int getPontos(string quem)
         {
-            if(quem != "empates")
+            if(!quem.Equals("empates"))
             {
+                if (quem.Equals(jogador1))
+                {
+                    return pontuacaoJogadores[quem] + pontosJog1;
+                }
+                else if (quem.Equals(jogador2))
+                {
+                    return pontuacaoJogadores[quem] + pontosJog2;
+                }
                 return pontuacaoJogadores[quem];
             }
             else
